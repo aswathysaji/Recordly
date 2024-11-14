@@ -1,0 +1,89 @@
+---
+import Layout from "../layouts/Layout.astro";
+import "../styles/index.css";
+---
+
+<script>
+  let recording = false;
+  let recorder: MediaRecorder | null = null;
+  let video = document.querySelector("video") as HTMLVideoElement | null;
+  let userVideo = document.querySelector(
+    ".user-video"
+  ) as HTMLVideoElement | null;
+  let recordButton = document.querySelector(
+    ".record-button"
+  ) as HTMLElement | null;
+  let captureButton = document.querySelector(
+    ".capture-button"
+  ) as HTMLElement | null;
+  let chunks: Blob[] = [];
+
+  navigator.mediaDevices
+    .getDisplayMedia({
+      video: {
+        displaySurface: "window",
+      },
+      audio: false,
+    })
+    .then(async (stream) => {
+      let user = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
+      if (video) {
+        video.srcObject = stream;
+      }
+      if (userVideo) {
+        userVideo.srcObject = user;
+      }
+      let combine = new MediaStream([
+        ...stream.getTracks(),
+        ...user.getTracks(),
+      ]);
+      recorder = new MediaRecorder(combine);
+      recorder.addEventListener("start", () => {
+        chunks = [];
+      });
+
+      recorder.addEventListener("dataavailable", (e: BlobEvent) => {
+        chunks.push(e.data);
+      });
+
+      recorder.addEventListener("stop", () => {
+        const blob = new Blob(chunks, { type: "video/mp4" });
+        const videoURL = URL.createObjectURL(blob);
+        const videoLink = document.createElement("a");
+        videoLink.href = videoURL;
+        videoLink.download = "stream.mp4"; // Fixed filename extension
+        videoLink.click();
+      });
+    });
+
+  recordButton?.addEventListener("click", () => {
+    if (!recorder) return;
+
+    recording = !recording;
+    if (recording) {
+      recorder?.start();
+      recordButton?.classList.add("scale-record");
+    } else {
+      recorder?.stop();
+      recordButton?.classList.remove("scale-record");
+    }
+  });
+</script>
+
+<Layout title="Video recorder">
+  <main>
+    <video src="" autoplay></video>
+    <video src="" autoplay class="user-video"></video>
+    <div class="button-container">
+      <div class="record-button-container">
+        <button onclick="" class="record-button"></button>
+      </div>
+      <div class="capture-button-container">
+        <button onclick="" class="capture-button"></button>
+      </div>
+    </div>
+  </main>
+</Layout>
